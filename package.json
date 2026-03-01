@@ -26,8 +26,19 @@
     "url": "https://github.com/paulearlemarshall/TooltrayTyper/issues"
   },
   "homepage": "https://github.com/paulearlemarshall/TooltrayTyper#readme",
+  "build": {
+    "appId": "com.paulearlemarshall.tooltraytyper",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "paulearlemarshall",
+        "repo": "TooltrayTyper"
+      }
+    ]
+  },
   "dependencies": {
-    "electron-store": "^11.0.2"
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^40.6.1",

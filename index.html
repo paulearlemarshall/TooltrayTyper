@@ -103,6 +103,10 @@
                             </svg>
                         </button>
                     </div>
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="apiKeyVerified" disabled>
+                        <span>API key validated (model fetch success)</span>
+                    </label>
                 </div>
 
                 <div class="form-group prompts-group">
@@ -147,6 +151,19 @@
                     <input type="text" id="hotkey" name="hotkey" placeholder="CommandOrControl+Alt+L"
                         value="CommandOrControl+Alt+L">
                     <p class="help-text">Default: Ctrl+Alt+L</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-inline">
+                        <input type="checkbox" id="clipboardSafeMode">
+                        <span>Clipboard Safe Mode (restore original clipboard after each action)</span>
+                    </label>
+                </div>
+
+                <div class="form-group utility-buttons">
+                    <button type="button" id="openClipboardLogBtn" class="secondary-button">Open Clipboard Log & Stats</button>
+                    <button type="button" id="checkUpdatesBtn" class="secondary-button">Check for Updates</button>
+                    <p id="updateStatus" class="help-text"></p>
                 </div>
 
             </form>

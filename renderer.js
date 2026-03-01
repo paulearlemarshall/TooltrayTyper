@@ -1,61 +1,68 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load existing settings
     const settings = await window.electronAPI.getSettings();
 
-    // Elements
     const providerSelect = document.getElementById('provider');
     const apiKeyInput = document.getElementById('apiKey');
     const modelSelect = document.getElementById('model');
     const refreshModelsBtn = document.getElementById('refreshModelsBtn');
+    const apiKeyVerified = document.getElementById('apiKeyVerified');
 
     const hotkeyInput = document.getElementById('hotkey');
+    const clipboardSafeModeInput = document.getElementById('clipboardSafeMode');
+
     const saveBtn = document.getElementById('saveBtn');
     const toggleVisibilityBtn = document.getElementById('toggleVisibility');
+    const openClipboardLogBtn = document.getElementById('openClipboardLogBtn');
+    const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
+    const updateStatus = document.getElementById('updateStatus');
 
-    // Button states
     const btnText = saveBtn.querySelector('span');
     const spinner = saveBtn.querySelector('.spinner');
     const checkIcon = saveBtn.querySelector('.check');
     const refreshIcon = refreshModelsBtn.querySelector('.refresh-icon');
 
-    // Populate values
     if (settings.provider) providerSelect.value = settings.provider;
 
-    // Load available keys or migrate old single key
     const apiKeys = settings.apiKeys || {};
     if (settings.apiKey && Object.keys(apiKeys).length === 0) {
         apiKeys[settings.provider || 'openai'] = settings.apiKey;
     }
 
-    // Load available models or migrate old single model
     const selectedModels = settings.selectedModels || {};
     if (settings.model && Object.keys(selectedModels).length === 0) {
         selectedModels[settings.provider || 'openai'] = settings.model;
     }
 
-    function updateApiKeyInput() {
-        apiKeyInput.value = apiKeys[providerSelect.value] || "";
+    function setApiKeyValidated(valid) {
+        apiKeyVerified.checked = !!valid;
     }
-    updateApiKeyInput();
-    if (settings.hotkey) hotkeyInput.value = settings.hotkey;
 
-    // Prompts
+    function updateApiKeyInput() {
+        apiKeyInput.value = apiKeys[providerSelect.value] || '';
+        setApiKeyValidated(false);
+    }
+
+    updateApiKeyInput();
+
+    if (settings.hotkey) hotkeyInput.value = settings.hotkey;
+    clipboardSafeModeInput.checked = typeof settings.clipboardSafeMode === 'boolean' ? settings.clipboardSafeMode : true;
+
     const defaultPrompts = [
-        "tidy this text",
-        "fix spelling and grammar",
-        "summarize this",
-        "translate to english"
+        'tidy this text',
+        'fix spelling and grammar',
+        'summarize this',
+        'translate to english'
     ];
+
     const prompts = settings.prompts || defaultPrompts;
     for (let i = 0; i < 4; i++) {
-        document.getElementById(`prompt${i}`).value = prompts[i] || "";
+        document.getElementById(`prompt${i}`).value = prompts[i] || '';
     }
 
     const activeIndex = settings.activePromptIndex || 0;
     const activeRadio = document.querySelector(`input[name="activePrompt"][value="${activeIndex}"]`);
     if (activeRadio) activeRadio.checked = true;
 
-    // Load initial models if API key exists
     const initialKey = apiKeys[providerSelect.value];
     if (initialKey) {
         await loadModels(providerSelect.value, initialKey, selectedModels[providerSelect.value]);
@@ -65,16 +72,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         refreshIcon.classList.add('spinning');
         refreshModelsBtn.disabled = true;
         modelSelect.innerHTML = '<option value="">Loading models...</option>';
+        setApiKeyValidated(false);
 
         try {
             const result = await window.electronAPI.fetchModels(provider, apiKey);
-            modelSelect.innerHTML = ''; // clear loading
+            modelSelect.innerHTML = '';
 
             if (result.error) {
                 const opt = document.createElement('option');
-                opt.value = "";
+                opt.value = '';
                 opt.textContent = `Error: ${result.error}`;
                 modelSelect.appendChild(opt);
+                setApiKeyValidated(false);
             } else if (result.models && result.models.length > 0) {
                 result.models.forEach(m => {
                     const opt = document.createElement('option');
@@ -83,21 +92,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (m === selectedModel) opt.selected = true;
                     modelSelect.appendChild(opt);
                 });
+                setApiKeyValidated(true);
             } else {
                 modelSelect.innerHTML = '<option value="">No models found</option>';
+                setApiKeyValidated(false);
             }
         } catch (err) {
             modelSelect.innerHTML = '<option value="">Failed to fetch models</option>';
+            setApiKeyValidated(false);
         } finally {
             refreshIcon.classList.remove('spinning');
             refreshModelsBtn.disabled = false;
         }
     }
 
-    // Event Listeners for fetching models dynamically
     refreshModelsBtn.addEventListener('click', () => {
         const apiKey = apiKeyInput.value.trim();
-        if (apiKey) loadModels(providerSelect.value, apiKey, modelSelect.value);
+        if (apiKey) {
+            loadModels(providerSelect.value, apiKey, modelSelect.value);
+        } else {
+            setApiKeyValidated(false);
+        }
     });
 
     modelSelect.addEventListener('change', () => {
@@ -107,30 +122,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     providerSelect.addEventListener('change', () => {
-        updateApiKeyInput(); // Swap the key UI before fetching models
+        updateApiKeyInput();
         const apiKey = apiKeyInput.value.trim();
         const savedModel = selectedModels[providerSelect.value];
+
         if (apiKey) {
             loadModels(providerSelect.value, apiKey, savedModel);
         } else {
-            modelSelect.innerHTML = '<option value="">Loading models...</option>';
+            modelSelect.innerHTML = '<option value="">Enter API key and refresh models</option>';
         }
     });
 
     apiKeyInput.addEventListener('input', () => {
-        // Save to our scoped object as the user types
         apiKeys[providerSelect.value] = apiKeyInput.value.trim();
+        setApiKeyValidated(false);
     });
 
     apiKeyInput.addEventListener('blur', () => {
         const apiKey = apiKeyInput.value.trim();
         const savedModel = selectedModels[providerSelect.value];
-        if (apiKey && modelSelect.options.length <= 1) { // Only auto-load if not already loaded nicely
+        if (apiKey && modelSelect.options.length <= 1) {
             loadModels(providerSelect.value, apiKey, savedModel);
         }
     });
 
-    // Toggle API Key visibility
     toggleVisibilityBtn.addEventListener('click', () => {
         const type = apiKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
         apiKeyInput.setAttribute('type', type);
@@ -141,11 +156,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Save Form
+    openClipboardLogBtn.addEventListener('click', async () => {
+        await window.electronAPI.openClipboardLog();
+    });
+
+    checkUpdatesBtn.addEventListener('click', async () => {
+        updateStatus.textContent = 'Checking for updates...';
+        const result = await window.electronAPI.checkForUpdates();
+        updateStatus.textContent = result.message || (result.success ? 'Update check requested.' : 'Update check failed.');
+    });
+
     saveBtn.addEventListener('click', async () => {
         const activeRadio = document.querySelector('input[name="activePrompt"]:checked');
 
-        // Final sync of current active key before saving
         apiKeys[providerSelect.value] = apiKeyInput.value.trim();
         if (modelSelect.value) {
             selectedModels[providerSelect.value] = modelSelect.value;
@@ -153,26 +176,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const newSettings = {
             provider: providerSelect.value,
-            apiKeys: apiKeys,
-            selectedModels: selectedModels,
+            apiKeys,
+            selectedModels,
             prompts: [
                 document.getElementById('prompt0').value,
                 document.getElementById('prompt1').value,
                 document.getElementById('prompt2').value,
                 document.getElementById('prompt3').value
             ],
-            activePromptIndex: activeRadio ? parseInt(activeRadio.value) : 0,
-            hotkey: hotkeyInput.value
+            activePromptIndex: activeRadio ? parseInt(activeRadio.value, 10) : 0,
+            hotkey: hotkeyInput.value,
+            clipboardSafeMode: clipboardSafeModeInput.checked
         };
 
-        // UI Feedback: Loading
         btnText.textContent = 'Saving...';
         spinner.classList.remove('hidden');
         saveBtn.disabled = true;
 
         await window.electronAPI.saveSettings(newSettings);
 
-        // UI Feedback: Success
         spinner.classList.add('hidden');
         checkIcon.classList.remove('hidden');
         btnText.textContent = 'Saved!';
@@ -183,6 +205,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnText.textContent = 'Save Settings';
             saveBtn.style.background = 'var(--accent-gradient)';
             saveBtn.disabled = false;
-        }, 2000);
+        }, 1800);
     });
 });

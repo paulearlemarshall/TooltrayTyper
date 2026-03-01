@@ -392,6 +392,43 @@ footer {
     display: none;
 }
 
+.checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.checkbox-inline input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-primary);
+}
+
+.utility-buttons {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.secondary-button {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.875rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.secondary-button:hover {
+    border-color: var(--accent-primary);
+    background: rgba(139, 92, 246, 0.12);
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

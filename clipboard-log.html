@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clipboard Log & Telemetry</title>
+    <link rel="stylesheet" href="clipboard-log.css" />
+</head>
+
+<body>
+    <main class="wrap">
+        <header class="topbar">
+            <h1>Clipboard Log & Telemetry</h1>
+            <div class="actions">
+                <button id="refreshBtn">Refresh</button>
+                <button id="clearLogsBtn" class="danger">Clear Logs</button>
+                <button id="resetStatsBtn" class="danger">Reset Stats</button>
+            </div>
+        </header>
+
+        <section class="panel">
+            <h2>Usage Summary</h2>
+            <div id="summaryGrid" class="grid"></div>
+            <h3>Per Provider</h3>
+            <pre id="providerBreakdown" class="mono"></pre>
+            <h3>Per Model</h3>
+            <pre id="modelBreakdown" class="mono"></pre>
+        </section>
+
+        <section class="panel">
+            <h2>Recent Actions</h2>
+            <div id="logList" class="log-list"></div>
+        </section>
+    </main>
+
+    <script src="clipboard-log.js"></script>
+</body>
+
+</html>
