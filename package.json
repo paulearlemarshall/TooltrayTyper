@@ -13,7 +13,8 @@
     "llm",
     "openai",
     "anthropic",
-    "gemini"
+    "gemini",
+    "fireworks"
   ],
   "author": "Paul Marshall <paul.e.marshall@gmail.com>",
   "license": "ISC",

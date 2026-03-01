@@ -228,6 +228,27 @@ async function processTextWithLLM(text) {
       return { ok: true, text: data.choices?.[0]?.message?.content || '', provider, model: selectedModel, prompt };
     }
 
+    if (provider === 'fireworks') {
+      const selectedModel = model || 'accounts/fireworks/models/llama-v3p1-8b-instruct';
+      const response = await fetch('https://api.fireworks.ai/inference/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text }
+          ]
+        })
+      });
+      const data = await response.json();
+      if (data.error) return { ok: false, error: data.error.message, provider, model: selectedModel, prompt };
+      return { ok: true, text: data.choices?.[0]?.message?.content || '', provider, model: selectedModel, prompt };
+    }
+
     if (provider === 'anthropic') {
       const selectedModel = model || 'claude-3-haiku-20240307';
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -565,6 +586,18 @@ ipcMain.handle('fetch-models', async (event, provider, apiKey) => {
       if (data.error) return { error: data.error.message };
       const chatModels = data.data.filter(m => m.id.includes('gpt')).map(m => m.id).sort();
       return { models: chatModels };
+    }
+
+    if (provider === 'fireworks') {
+      const response = await fetch('https://api.fireworks.ai/inference/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      const data = await response.json();
+      if (data.error) return { error: data.error.message };
+      const models = (data.data || []).map(m => m.id).sort();
+      return { models };
     }
 
     if (provider === 'anthropic') {
