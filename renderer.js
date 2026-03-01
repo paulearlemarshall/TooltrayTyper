@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const providerSelect = document.getElementById('provider');
     const apiKeyInput = document.getElementById('apiKey');
     const modelSelect = document.getElementById('model');
+    const modelFilterInput = document.getElementById('modelFilter');
     const refreshModelsBtn = document.getElementById('refreshModelsBtn');
     const apiKeyVerified = document.getElementById('apiKeyVerified');
 
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openClipboardLogBtn = document.getElementById('openClipboardLogBtn');
     const checkUpdatesBtn = document.getElementById('checkUpdatesBtn');
     const updateStatus = document.getElementById('updateStatus');
+    const autosaveStatus = document.getElementById('autosaveStatus');
 
     const btnText = saveBtn.querySelector('span');
     const spinner = saveBtn.querySelector('.spinner');
@@ -31,6 +33,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     const selectedModels = settings.selectedModels || {};
     if (settings.model && Object.keys(selectedModels).length === 0) {
         selectedModels[settings.provider || 'openai'] = settings.model;
+    }
+
+    const allModelsByProvider = {};
+
+    function buildSettingsPayload() {
+        const activeRadio = document.querySelector('input[name="activePrompt"]:checked');
+        return {
+            provider: providerSelect.value,
+            apiKeys,
+            selectedModels,
+            prompts: [
+                document.getElementById('prompt0').value,
+                document.getElementById('prompt1').value,
+                document.getElementById('prompt2').value,
+                document.getElementById('prompt3').value
+            ],
+            activePromptIndex: activeRadio ? parseInt(activeRadio.value, 10) : 0,
+            hotkey: hotkeyInput.value,
+            clipboardSafeMode: clipboardSafeModeInput.checked
+        };
+    }
+
+    async function saveSettingsSilently(reason) {
+        try {
+            await window.electronAPI.saveSettings(buildSettingsPayload());
+            console.log(`[settings] autosaved (${reason})`);
+            showAutosaveStatus('Autosaved');
+        } catch (err) {
+            console.error(`[settings] autosave failed (${reason}):`, err);
+            showAutosaveStatus('Autosave failed', true, 2500);
+        }
+    }
+
+    let autosaveTimer = null;
+    let autosaveReason = '';
+    let autosaveStatusTimer = null;
+
+    function showAutosaveStatus(message, isError = false, holdMs = 1200) {
+        if (!autosaveStatus) return;
+        autosaveStatus.textContent = message;
+        autosaveStatus.classList.toggle('error', !!isError);
+
+        if (autosaveStatusTimer) {
+            clearTimeout(autosaveStatusTimer);
+            autosaveStatusTimer = null;
+        }
+
+        if (holdMs > 0) {
+            autosaveStatusTimer = setTimeout(() => {
+                autosaveStatus.textContent = '';
+                autosaveStatus.classList.remove('error');
+                autosaveStatusTimer = null;
+            }, holdMs);
+        }
+    }
+
+    function scheduleAutosave(reason, delayMs = 350) {
+        autosaveReason = reason;
+        showAutosaveStatus('Autosaving...', false, 0);
+
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(async () => {
+            autosaveTimer = null;
+            showAutosaveStatus('Saving...', false, 0);
+            await saveSettingsSilently(`debounced:${autosaveReason}`);
+        }, delayMs);
+    }
+
+    async function flushAutosave(reason) {
+        if (autosaveTimer) {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = null;
+        }
+
+        showAutosaveStatus('Saving...', false, 0);
+        await saveSettingsSilently(reason);
     }
 
     function setApiKeyValidated(valid) {
@@ -68,6 +146,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadModels(providerSelect.value, initialKey, selectedModels[providerSelect.value]);
     }
 
+    function renderModelOptions(models, selectedModel = null) {
+        modelSelect.innerHTML = '';
+
+        if (!models || models.length === 0) {
+            modelSelect.innerHTML = '<option value="">No models found</option>';
+            return;
+        }
+
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            if (m === selectedModel) opt.selected = true;
+            modelSelect.appendChild(opt);
+        });
+    }
+
+    function applyModelFilter(provider, selectedModel = null) {
+        const allModels = allModelsByProvider[provider] || [];
+        const filterText = modelFilterInput.value.trim().toLowerCase();
+        const filtered = filterText
+            ? allModels.filter(m => m.toLowerCase().includes(filterText))
+            : allModels;
+
+        renderModelOptions(filtered, selectedModel);
+    }
+
     async function loadModels(provider, apiKey, selectedModel = null) {
         refreshIcon.classList.add('spinning');
         refreshModelsBtn.disabled = true;
@@ -76,28 +181,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const result = await window.electronAPI.fetchModels(provider, apiKey);
-            modelSelect.innerHTML = '';
 
             if (result.error) {
                 const opt = document.createElement('option');
+                modelSelect.innerHTML = '';
                 opt.value = '';
                 opt.textContent = `Error: ${result.error}`;
                 modelSelect.appendChild(opt);
+                allModelsByProvider[provider] = [];
                 setApiKeyValidated(false);
             } else if (result.models && result.models.length > 0) {
-                result.models.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m;
-                    opt.textContent = m;
-                    if (m === selectedModel) opt.selected = true;
-                    modelSelect.appendChild(opt);
-                });
+                allModelsByProvider[provider] = result.models;
+                applyModelFilter(provider, selectedModel);
                 setApiKeyValidated(true);
             } else {
+                allModelsByProvider[provider] = [];
                 modelSelect.innerHTML = '<option value="">No models found</option>';
                 setApiKeyValidated(false);
             }
         } catch (err) {
+            allModelsByProvider[provider] = [];
             modelSelect.innerHTML = '<option value="">Failed to fetch models</option>';
             setApiKeyValidated(false);
         } finally {
@@ -115,19 +218,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    modelSelect.addEventListener('change', () => {
+    modelSelect.addEventListener('change', async () => {
         if (modelSelect.value) {
             selectedModels[providerSelect.value] = modelSelect.value;
         }
+        await saveSettingsSilently('model_change');
     });
 
-    providerSelect.addEventListener('change', () => {
+    modelFilterInput.addEventListener('input', () => {
+        const provider = providerSelect.value;
+        const allModels = allModelsByProvider[provider] || [];
+        if (allModels.length === 0) return;
+
+        const preferredModel = modelSelect.value || selectedModels[provider] || null;
+        applyModelFilter(provider, preferredModel);
+    });
+
+    providerSelect.addEventListener('change', async () => {
         updateApiKeyInput();
+        const provider = providerSelect.value;
         const apiKey = apiKeyInput.value.trim();
-        const savedModel = selectedModels[providerSelect.value];
+        const savedModel = selectedModels[provider];
+
+        await saveSettingsSilently('provider_change');
 
         if (apiKey) {
-            loadModels(providerSelect.value, apiKey, savedModel);
+            loadModels(provider, apiKey, savedModel);
+        } else if ((allModelsByProvider[provider] || []).length > 0) {
+            applyModelFilter(provider, savedModel);
         } else {
             modelSelect.innerHTML = '<option value="">Enter API key and refresh models</option>';
         }
@@ -136,9 +254,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     apiKeyInput.addEventListener('input', () => {
         apiKeys[providerSelect.value] = apiKeyInput.value.trim();
         setApiKeyValidated(false);
+        scheduleAutosave('api_key_input');
     });
 
-    apiKeyInput.addEventListener('blur', () => {
+    apiKeyInput.addEventListener('blur', async () => {
+        apiKeys[providerSelect.value] = apiKeyInput.value.trim();
+        await flushAutosave('api_key_blur');
+
         const apiKey = apiKeyInput.value.trim();
         const savedModel = selectedModels[providerSelect.value];
         if (apiKey && modelSelect.options.length <= 1) {
@@ -166,28 +288,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateStatus.textContent = result.message || (result.success ? 'Update check requested.' : 'Update check failed.');
     });
 
+    hotkeyInput.addEventListener('input', () => {
+        scheduleAutosave('hotkey_input', 500);
+    });
+
+    hotkeyInput.addEventListener('blur', async () => {
+        await flushAutosave('hotkey_blur');
+    });
+
+    clipboardSafeModeInput.addEventListener('change', async () => {
+        await saveSettingsSilently('clipboard_safe_mode_change');
+    });
+
+    document.querySelectorAll('input[name="activePrompt"]').forEach(radio => {
+        radio.addEventListener('change', async () => {
+            await saveSettingsSilently('active_prompt_change');
+        });
+    });
+
+    for (let i = 0; i < 4; i++) {
+        const promptInput = document.getElementById(`prompt${i}`);
+        promptInput.addEventListener('input', () => {
+            scheduleAutosave(`prompt${i}_input`, 450);
+        });
+        promptInput.addEventListener('blur', async () => {
+            await flushAutosave(`prompt${i}_blur`);
+        });
+    }
+
     saveBtn.addEventListener('click', async () => {
-        const activeRadio = document.querySelector('input[name="activePrompt"]:checked');
+        if (autosaveTimer) {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = null;
+        }
+        if (autosaveStatusTimer) {
+            clearTimeout(autosaveStatusTimer);
+            autosaveStatusTimer = null;
+        }
+        if (autosaveStatus) {
+            autosaveStatus.textContent = '';
+            autosaveStatus.classList.remove('error');
+        }
 
         apiKeys[providerSelect.value] = apiKeyInput.value.trim();
         if (modelSelect.value) {
             selectedModels[providerSelect.value] = modelSelect.value;
         }
 
-        const newSettings = {
-            provider: providerSelect.value,
-            apiKeys,
-            selectedModels,
-            prompts: [
-                document.getElementById('prompt0').value,
-                document.getElementById('prompt1').value,
-                document.getElementById('prompt2').value,
-                document.getElementById('prompt3').value
-            ],
-            activePromptIndex: activeRadio ? parseInt(activeRadio.value, 10) : 0,
-            hotkey: hotkeyInput.value,
-            clipboardSafeMode: clipboardSafeModeInput.checked
-        };
+        const newSettings = buildSettingsPayload();
 
         btnText.textContent = 'Saving...';
         spinner.classList.remove('hidden');
@@ -197,6 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         spinner.classList.add('hidden');
         checkIcon.classList.remove('hidden');
+        showAutosaveStatus('Saved');
         btnText.textContent = 'Saved!';
         saveBtn.style.background = 'var(--success)';
 

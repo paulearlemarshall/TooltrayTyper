@@ -57,6 +57,7 @@
                             <option value="gemini">Google Gemini</option>
                             <option value="anthropic">Anthropic (Claude)</option>
                             <option value="fireworks">Fireworks AI</option>
+                            <option value="openrouter">OpenRouter</option>
                         </select>
                         <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"
                             xmlns="http://www.w3.org/2000/svg">
@@ -84,6 +85,7 @@
                 <div class="form-group">
                     <label for="model">Model</label>
                     <div class="model-row">
+                        <input type="text" id="modelFilter" name="modelFilter" class="model-filter-input" placeholder="Filter models...">
                         <div class="select-wrapper flex-grow">
                             <select id="model" name="model">
                                 <option value="">Loading models...</option>
@@ -171,6 +173,7 @@
         </main>
 
         <footer>
+            <p id="autosaveStatus" class="help-text autosave-status"></p>
             <button type="button" id="saveBtn" class="primary-button">
                 <span>Save Settings</span>
                 <svg class="spinner hidden" width="20" height="20" viewBox="0 0 24 24"

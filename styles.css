@@ -226,6 +226,11 @@ select {
     align-items: center;
 }
 
+.model-filter-input {
+    flex: 0 0 170px;
+    max-width: 170px;
+}
+
 .flex-grow {
     flex-grow: 1;
 }
@@ -341,6 +346,16 @@ footer {
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--border-color);
+}
+
+.autosave-status {
+    min-height: 1rem;
+    margin-bottom: 0.65rem;
+    text-align: center;
+}
+
+.autosave-status.error {
+    color: var(--danger);
 }
 
 .primary-button {

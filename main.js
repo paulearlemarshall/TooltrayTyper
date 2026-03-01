@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, globalShortcut, clipboard, Notification } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { exec } = require('child_process');
 const { autoUpdater } = require('electron-updater');
 
@@ -249,6 +250,28 @@ async function processTextWithLLM(text) {
       return { ok: true, text: data.choices?.[0]?.message?.content || '', provider, model: selectedModel, prompt };
     }
 
+    if (provider === 'openrouter') {
+      const selectedModel = model || 'openrouter/auto';
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Title': 'TooltrayTyper'
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text }
+          ]
+        })
+      });
+      const data = await response.json();
+      if (data.error) return { ok: false, error: data.error.message, provider, model: selectedModel, prompt };
+      return { ok: true, text: data.choices?.[0]?.message?.content || '', provider, model: selectedModel, prompt };
+    }
+
     if (provider === 'anthropic') {
       const selectedModel = model || 'claude-3-haiku-20240307';
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -294,11 +317,35 @@ async function processTextWithLLM(text) {
   }
 }
 
-function runSendKeys(action) {
+function runSendKeys(action, actionId = 'unknown') {
   return new Promise((resolve, reject) => {
     const helperExe = path.join(__dirname, 'SendKeysHelper.exe');
-    exec(`"${helperExe}" ${action}`, (err) => {
-      if (err) return reject(err);
+
+    if (!fs.existsSync(helperExe)) {
+      const error = new Error(`SendKeys helper not found at ${helperExe}`);
+      console.error(`[${actionId}] runSendKeys(${action}) failed: ${error.message}`);
+      return reject(error);
+    }
+
+    const started = Date.now();
+    exec(`"${helperExe}" ${action}`, (err, stdout = '', stderr = '') => {
+      const elapsed = Date.now() - started;
+
+      if (err) {
+        console.error(`[${actionId}] runSendKeys(${action}) error after ${elapsed}ms: ${err.message}`);
+        if (stderr?.trim()) console.error(`[${actionId}] runSendKeys(${action}) stderr: ${stderr.trim()}`);
+        return reject(err);
+      }
+
+      if (stderr?.trim()) {
+        console.warn(`[${actionId}] runSendKeys(${action}) stderr (non-fatal): ${stderr.trim()}`);
+      }
+
+      if (stdout?.trim()) {
+        console.log(`[${actionId}] runSendKeys(${action}) stdout: ${stdout.trim()}`);
+      }
+
+      console.log(`[${actionId}] runSendKeys(${action}) ok in ${elapsed}ms`);
       resolve();
     });
   });
@@ -308,19 +355,84 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getSelectedTextViaClipboard() {
-  const previousClipboard = clipboard.readText();
-  clipboard.clear();
-  await runSendKeys('copy');
-  await sleep(170);
-  const selectedText = clipboard.readText();
-  return { previousClipboard, selectedText };
+function getWindowFocusDebug() {
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const mainWindowFocused = mainWindow && !mainWindow.isDestroyed() ? mainWindow.isFocused() : null;
+
+  return {
+    appFocused: !!focusedWindow,
+    mainWindowExists: !!mainWindow,
+    mainWindowDestroyed: mainWindow ? mainWindow.isDestroyed() : null,
+    mainWindowVisible: mainWindow && !mainWindow.isDestroyed() ? mainWindow.isVisible() : null,
+    mainWindowFocused,
+    focusedWindowTitle: focusedWindow?.getTitle?.() || null,
+    focusedWindowIsMainWindow: !!(focusedWindow && mainWindow && focusedWindow === mainWindow)
+  };
 }
 
-async function pasteText(text) {
-  clipboard.writeText(text || '');
-  await runSendKeys('paste');
+function maskTextPreview(text, max = 80) {
+  if (!text) return '';
+  const clean = String(text).replace(/\s+/g, ' ').trim();
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean;
+}
+
+async function getSelectedTextViaClipboard(actionId = 'unknown') {
+  const previousClipboard = clipboard.readText();
+  const previousClipboardLength = previousClipboard.length;
+  const attemptDelays = [170, 260, 380];
+
+  console.log(`[${actionId}] copy-phase start; previousClipboardLength=${previousClipboardLength}`);
+  clipboard.clear();
+
+  let selectedText = '';
+  let selectedTextLength = 0;
+  let attempts = [];
+
+  for (let i = 0; i < attemptDelays.length; i += 1) {
+    const delayMs = attemptDelays[i];
+    const attemptNo = i + 1;
+    const attemptStart = Date.now();
+
+    await runSendKeys('copy', actionId);
+    await sleep(delayMs);
+
+    selectedText = clipboard.readText();
+    selectedTextLength = selectedText.length;
+    const attemptMs = Date.now() - attemptStart;
+
+    const attemptInfo = {
+      attempt: attemptNo,
+      delayMs,
+      elapsedMs: attemptMs,
+      selectedTextLength,
+      hasTrimmedText: !!selectedText.trim(),
+      preview: maskTextPreview(selectedText)
+    };
+
+    attempts.push(attemptInfo);
+    console.log(`[${actionId}] copy attempt ${attemptNo}/${attemptDelays.length}: delay=${delayMs}ms elapsed=${attemptMs}ms length=${selectedTextLength} hasTrimmed=${attemptInfo.hasTrimmedText} preview="${attemptInfo.preview}"`);
+
+    if (attemptInfo.hasTrimmedText) {
+      break;
+    }
+  }
+
+  return {
+    previousClipboard,
+    previousClipboardLength,
+    selectedText,
+    selectedTextLength,
+    attempts
+  };
+}
+
+async function pasteText(text, actionId = 'unknown') {
+  const safeText = text || '';
+  clipboard.writeText(safeText);
+  console.log(`[${actionId}] paste-phase start; outputLength=${safeText.length}`);
+  await runSendKeys('paste', actionId);
   await sleep(170);
+  console.log(`[${actionId}] paste-phase completed`);
 }
 
 async function handleHotkeyAction() {
@@ -341,15 +453,65 @@ async function handleHotkeyAction() {
   let pasteMs = 0;
 
   try {
+    const focusDebug = getWindowFocusDebug();
+    console.log(`[${actionId}] hotkey action start; clipboardSafeMode=${clipboardSafeMode} focus=${JSON.stringify(focusDebug)}`);
+
+    if (focusDebug.mainWindowFocused) {
+      const totalMs = Date.now() - startedAt;
+      const { provider: p, model: m } = getProviderAndModel();
+      provider = p;
+      model = m || 'unknown';
+
+      const message = 'Settings window is focused. Click your target app and try again.';
+      console.warn(`[${actionId}] blocked: ${message}`);
+
+      const record = {
+        id: actionId,
+        timestamp: startedIso,
+        status: 'no_selection',
+        provider,
+        model,
+        prompt,
+        inputText: '',
+        outputText: '',
+        error: message,
+        clipboardSafeMode,
+        diagnostics: {
+          focusDebug,
+          reason: 'main_window_focused'
+        },
+        durations: { copyMs: 0, llmMs: 0, pasteMs: 0, totalMs }
+      };
+
+      addActionLog(record);
+      recordUsage({
+        status: 'no_selection',
+        provider,
+        model,
+        inputChars: 0,
+        outputChars: 0,
+        durationMs: totalMs
+      });
+
+      notifyUser('TooltrayTyper', message);
+      return;
+    }
+
     const copyStart = Date.now();
-    const copied = await getSelectedTextViaClipboard();
+    const copied = await getSelectedTextViaClipboard(actionId);
     copyMs = Date.now() - copyStart;
 
     previousClipboard = copied.previousClipboard;
     selectedText = copied.selectedText;
 
+    console.log(`[${actionId}] copy-phase summary; copyMs=${copyMs} selectedLength=${copied.selectedTextLength} previousClipboardLength=${copied.previousClipboardLength}`);
+
     if (!selectedText || !selectedText.trim()) {
-      if (clipboardSafeMode) clipboard.writeText(previousClipboard);
+      console.warn(`[${actionId}] no selection detected after copy attempts; attempts=${JSON.stringify(copied.attempts)}`);
+      if (clipboardSafeMode) {
+        clipboard.writeText(previousClipboard);
+        console.log(`[${actionId}] clipboard restored after no-selection; length=${previousClipboard.length}`);
+      }
 
       const totalMs = Date.now() - startedAt;
       const { provider: p, model: m } = getProviderAndModel();
@@ -367,6 +529,12 @@ async function handleHotkeyAction() {
         outputText: '',
         error: 'No text selected.',
         clipboardSafeMode,
+        diagnostics: {
+          copyAttempts: copied.attempts,
+          selectedTextLength: copied.selectedTextLength,
+          previousClipboardLength: copied.previousClipboardLength,
+          focusDebug
+        },
         durations: { copyMs, llmMs: 0, pasteMs: 0, totalMs }
       };
 
@@ -384,6 +552,7 @@ async function handleHotkeyAction() {
       return;
     }
 
+    console.log(`[${actionId}] sending text to LLM; inputLength=${selectedText.length}`);
     const llmStart = Date.now();
     const llmResult = await processTextWithLLM(selectedText);
     llmMs = Date.now() - llmStart;
@@ -392,8 +561,14 @@ async function handleHotkeyAction() {
     model = llmResult.model || model;
     prompt = llmResult.prompt || '';
 
+    console.log(`[${actionId}] LLM response received; ok=${llmResult.ok} provider=${provider} model=${model} llmMs=${llmMs}`);
+
     if (!llmResult.ok) {
-      if (clipboardSafeMode) clipboard.writeText(previousClipboard);
+      console.warn(`[${actionId}] LLM returned error: ${llmResult.error || 'Unknown error'}`);
+      if (clipboardSafeMode) {
+        clipboard.writeText(previousClipboard);
+        console.log(`[${actionId}] clipboard restored after LLM error; length=${previousClipboard.length}`);
+      }
 
       const totalMs = Date.now() - startedAt;
       const record = {
@@ -427,10 +602,14 @@ async function handleHotkeyAction() {
     outputText = llmResult.text || '';
 
     const pasteStart = Date.now();
-    await pasteText(outputText);
+    await pasteText(outputText, actionId);
     pasteMs = Date.now() - pasteStart;
+    console.log(`[${actionId}] paste-phase summary; pasteMs=${pasteMs}`);
 
-    if (clipboardSafeMode) clipboard.writeText(previousClipboard);
+    if (clipboardSafeMode) {
+      clipboard.writeText(previousClipboard);
+      console.log(`[${actionId}] clipboard restored after success; length=${previousClipboard.length}`);
+    }
 
     const totalMs = Date.now() - startedAt;
     const record = {
@@ -460,7 +639,10 @@ async function handleHotkeyAction() {
     console.log(`[${actionId}] success provider=${provider} model=${model} total=${totalMs}ms in=${selectedText.length} out=${outputText.length}`);
     notifyUser('TooltrayTyper', `Updated text via ${provider} (${model}) in ${totalMs}ms.`);
   } catch (error) {
-    if (clipboardSafeMode && previousClipboard) clipboard.writeText(previousClipboard);
+    if (clipboardSafeMode && previousClipboard) {
+      clipboard.writeText(previousClipboard);
+      console.log(`[${actionId}] clipboard restored after fatal error; length=${previousClipboard.length}`);
+    }
 
     const totalMs = Date.now() - startedAt;
     const { provider: p, model: m } = getProviderAndModel();
@@ -592,6 +774,19 @@ ipcMain.handle('fetch-models', async (event, provider, apiKey) => {
       const response = await fetch('https://api.fireworks.ai/inference/v1/models', {
         headers: {
           'Authorization': `Bearer ${apiKey}`
+        }
+      });
+      const data = await response.json();
+      if (data.error) return { error: data.error.message };
+      const models = (data.data || []).map(m => m.id).sort();
+      return { models };
+    }
+
+    if (provider === 'openrouter') {
+      const response = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Title': 'TooltrayTyper'
         }
       });
       const data = await response.json();

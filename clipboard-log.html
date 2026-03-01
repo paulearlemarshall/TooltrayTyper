@@ -22,10 +22,14 @@
         <section class="panel">
             <h2>Usage Summary</h2>
             <div id="summaryGrid" class="grid"></div>
-            <h3>Per Provider</h3>
-            <pre id="providerBreakdown" class="mono"></pre>
-            <h3>Per Model</h3>
-            <pre id="modelBreakdown" class="mono"></pre>
+            <details class="rollup-section">
+                <summary>Per Provider</summary>
+                <pre id="providerBreakdown" class="mono"></pre>
+            </details>
+            <details class="rollup-section">
+                <summary>Per Model</summary>
+                <pre id="modelBreakdown" class="mono"></pre>
+            </details>
         </section>
 
         <section class="panel">

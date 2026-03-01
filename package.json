@@ -14,7 +14,8 @@
     "openai",
     "anthropic",
     "gemini",
-    "fireworks"
+    "fireworks",
+    "openrouter"
   ],
   "author": "Paul Marshall <paul.e.marshall@gmail.com>",
   "license": "ISC",
