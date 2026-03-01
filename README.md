@@ -15,6 +15,7 @@ TooltrayTyper is an Electron tray app that lets you quickly rewrite selected tex
   - Google Gemini
   - Fireworks AI
   - OpenRouter
+  - xAI (Grok)
 - Lets you store per-provider API keys and model choices
 - Lets you define 4 quick prompts and choose the active one
 - Clipboard Safe Mode (restores previous clipboard after each action)

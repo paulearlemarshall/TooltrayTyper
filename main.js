@@ -18,7 +18,7 @@ const DEFAULT_PROMPTS = [
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 640,
+    width: 1120,
     height: 980,
     show: false,
     webPreferences: {
@@ -258,6 +258,27 @@ async function processTextWithLLM(text) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
           'X-Title': 'TooltrayTyper'
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text }
+          ]
+        })
+      });
+      const data = await response.json();
+      if (data.error) return { ok: false, error: data.error.message, provider, model: selectedModel, prompt };
+      return { ok: true, text: data.choices?.[0]?.message?.content || '', provider, model: selectedModel, prompt };
+    }
+
+    if (provider === 'xai') {
+      const selectedModel = model || 'grok-2-latest';
+      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           model: selectedModel,
@@ -787,6 +808,18 @@ ipcMain.handle('fetch-models', async (event, provider, apiKey) => {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'X-Title': 'TooltrayTyper'
+        }
+      });
+      const data = await response.json();
+      if (data.error) return { error: data.error.message };
+      const models = (data.data || []).map(m => m.id).sort();
+      return { models };
+    }
+
+    if (provider === 'xai') {
+      const response = await fetch('https://api.x.ai/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
         }
       });
       const data = await response.json();

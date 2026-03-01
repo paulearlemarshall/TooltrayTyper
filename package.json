@@ -15,7 +15,9 @@
     "anthropic",
     "gemini",
     "fireworks",
-    "openrouter"
+    "openrouter",
+    "xai",
+    "grok"
   ],
   "author": "Paul Marshall <paul.e.marshall@gmail.com>",
   "license": "ISC",

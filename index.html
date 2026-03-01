@@ -49,126 +49,132 @@
 
         <main>
             <form id="settingsForm">
-                <div class="form-group">
-                    <label for="provider">LLM Provider</label>
-                    <div class="select-wrapper">
-                        <select id="provider" name="provider">
-                            <option value="openai">OpenAI (ChatGPT)</option>
-                            <option value="gemini">Google Gemini</option>
-                            <option value="anthropic">Anthropic (Claude)</option>
-                            <option value="fireworks">Fireworks AI</option>
-                            <option value="openrouter">OpenRouter</option>
-                        </select>
-                        <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.67"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="apiKey">API Key <span class="required">*</span></label>
-                    <div class="input-wrapper">
-                        <input type="password" id="apiKey" name="apiKey" placeholder="sk-..." required>
-                        <button type="button" id="toggleVisibility" class="icon-button" aria-label="Toggle visibility">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="help-text">Your API key is stored locally and securely.</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="model">Model</label>
-                    <div class="model-row">
-                        <input type="text" id="modelFilter" name="modelFilter" class="model-filter-input" placeholder="Filter models...">
-                        <div class="select-wrapper flex-grow">
-                            <select id="model" name="model">
-                                <option value="">Loading models...</option>
-                            </select>
-                            <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.67"
-                                    stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
+                <div class="settings-grid">
+                    <div class="settings-column">
+                        <div class="form-group">
+                            <label for="provider">LLM Provider</label>
+                            <div class="select-wrapper">
+                                <select id="provider" name="provider">
+                                    <option value="openai">OpenAI (ChatGPT)</option>
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="anthropic">Anthropic (Claude)</option>
+                                    <option value="fireworks">Fireworks AI</option>
+                                    <option value="openrouter">OpenRouter</option>
+                                    <option value="xai">xAI (Grok)</option>
+                                </select>
+                                <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.67"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
                         </div>
-                        <button type="button" id="refreshModelsBtn" class="icon-button outline-btn"
-                            aria-label="Refresh Models" title="Refresh Models">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
-                                <polyline points="23 4 23 10 17 10"></polyline>
-                                <polyline points="1 20 1 14 7 14"></polyline>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                            </svg>
-                        </button>
+
+                        <div class="form-group">
+                            <label for="apiKey">API Key <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <input type="password" id="apiKey" name="apiKey" placeholder="sk-..." required>
+                                <button type="button" id="toggleVisibility" class="icon-button" aria-label="Toggle visibility">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="help-text">Your API key is stored locally and securely.</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="model">Model</label>
+                            <div class="model-row">
+                                <input type="text" id="modelFilter" name="modelFilter" class="model-filter-input" placeholder="Filter models...">
+                                <div class="select-wrapper flex-grow">
+                                    <select id="model" name="model">
+                                        <option value="">Loading models...</option>
+                                    </select>
+                                    <svg class="chevron" width="20" height="20" viewBox="0 0 20 20" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.67"
+                                            stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </div>
+                                <button type="button" id="refreshModelsBtn" class="icon-button outline-btn"
+                                    aria-label="Refresh Models" title="Refresh Models">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" id="apiKeyVerified" disabled>
+                                <span>API key validated (model fetch success)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-inline">
+                                <input type="checkbox" id="clipboardSafeMode">
+                                <span>Clipboard Safe Mode (restore original clipboard after each action)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-group utility-buttons">
+                            <button type="button" id="openClipboardLogBtn" class="secondary-button">Open Clipboard Log & Stats</button>
+                            <button type="button" id="checkUpdatesBtn" class="secondary-button">Check for Updates</button>
+                            <p id="updateStatus" class="help-text"></p>
+                        </div>
                     </div>
-                    <label class="checkbox-inline">
-                        <input type="checkbox" id="apiKeyVerified" disabled>
-                        <span>API key validated (model fetch success)</span>
-                    </label>
-                </div>
 
-                <div class="form-group prompts-group">
-                    <label>Configurable Prompts</label>
-                    <p class="help-text mb-3">Select the active prompt to use when pressing the hotkey.</p>
+                    <div class="settings-column">
+                        <div class="form-group">
+                            <label for="hotkey">Global Hotkey Activation</label>
+                            <input type="text" id="hotkey" name="hotkey" placeholder="CommandOrControl+Alt+L"
+                                value="CommandOrControl+Alt+L">
+                            <p class="help-text">Default: Ctrl+Alt+L</p>
+                        </div>
 
-                    <div class="prompt-item">
-                        <label class="radio-label">
-                            <input type="radio" name="activePrompt" value="0" checked>
-                            <span class="custom-radio"></span>
-                        </label>
-                        <textarea id="prompt0" rows="2" placeholder="tidy this text"></textarea>
+                        <div class="form-group prompts-group">
+                            <label>Configurable Prompts</label>
+                            <p class="help-text mb-3">Select the active prompt to use when pressing the hotkey.</p>
+
+                            <div class="prompt-item">
+                                <label class="radio-label">
+                                    <input type="radio" name="activePrompt" value="0" checked>
+                                    <span class="custom-radio"></span>
+                                </label>
+                                <textarea id="prompt0" rows="2" placeholder="tidy this text"></textarea>
+                            </div>
+
+                            <div class="prompt-item">
+                                <label class="radio-label">
+                                    <input type="radio" name="activePrompt" value="1">
+                                    <span class="custom-radio"></span>
+                                </label>
+                                <textarea id="prompt1" rows="2" placeholder="fix spelling and grammar"></textarea>
+                            </div>
+
+                            <div class="prompt-item">
+                                <label class="radio-label">
+                                    <input type="radio" name="activePrompt" value="2">
+                                    <span class="custom-radio"></span>
+                                </label>
+                                <textarea id="prompt2" rows="2" placeholder="summarize this text"></textarea>
+                            </div>
+
+                            <div class="prompt-item">
+                                <label class="radio-label">
+                                    <input type="radio" name="activePrompt" value="3">
+                                    <span class="custom-radio"></span>
+                                </label>
+                                <textarea id="prompt3" rows="2" placeholder="translate to english"></textarea>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="prompt-item">
-                        <label class="radio-label">
-                            <input type="radio" name="activePrompt" value="1">
-                            <span class="custom-radio"></span>
-                        </label>
-                        <textarea id="prompt1" rows="2" placeholder="fix spelling and grammar"></textarea>
-                    </div>
-
-                    <div class="prompt-item">
-                        <label class="radio-label">
-                            <input type="radio" name="activePrompt" value="2">
-                            <span class="custom-radio"></span>
-                        </label>
-                        <textarea id="prompt2" rows="2" placeholder="summarize this text"></textarea>
-                    </div>
-
-                    <div class="prompt-item">
-                        <label class="radio-label">
-                            <input type="radio" name="activePrompt" value="3">
-                            <span class="custom-radio"></span>
-                        </label>
-                        <textarea id="prompt3" rows="2" placeholder="translate to english"></textarea>
-                    </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="hotkey">Global Hotkey Activation</label>
-                    <input type="text" id="hotkey" name="hotkey" placeholder="CommandOrControl+Alt+L"
-                        value="CommandOrControl+Alt+L">
-                    <p class="help-text">Default: Ctrl+Alt+L</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="checkbox-inline">
-                        <input type="checkbox" id="clipboardSafeMode">
-                        <span>Clipboard Safe Mode (restore original clipboard after each action)</span>
-                    </label>
-                </div>
-
-                <div class="form-group utility-buttons">
-                    <button type="button" id="openClipboardLogBtn" class="secondary-button">Open Clipboard Log & Stats</button>
-                    <button type="button" id="checkUpdatesBtn" class="secondary-button">Check for Updates</button>
-                    <p id="updateStatus" class="help-text"></p>
-                </div>
-
             </form>
         </main>
 
