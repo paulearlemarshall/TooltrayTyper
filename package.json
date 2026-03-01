@@ -1,16 +1,31 @@
 {
   "name": "tooltraytyper",
   "version": "1.0.0",
-  "description": "Tooltray LLM Typer",
+  "description": "Tray-based text rewriting helper powered by LLM providers",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "electron",
+    "tray",
+    "llm",
+    "openai",
+    "anthropic",
+    "gemini"
+  ],
+  "author": "Paul Marshall <paul.e.marshall@gmail.com>",
   "license": "ISC",
   "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulearlemarshall/TooltrayTyper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paulearlemarshall/TooltrayTyper/issues"
+  },
+  "homepage": "https://github.com/paulearlemarshall/TooltrayTyper#readme",
   "dependencies": {
     "electron-store": "^11.0.2"
   },
