@@ -39,6 +39,23 @@ npm start
 npm run dist
 ```
 
+## Releases
+
+This repo includes a GitHub Actions release workflow at `.github/workflows/release.yml`.
+
+- Push a tag like `v1.0.0` to trigger a Windows build and GitHub Release.
+- You can also run it manually from the Actions tab.
+
+### Cut a release
+
+```bash
+git pull
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+After the workflow completes, the release artifacts are attached to the GitHub Release page.
+
 ## Configure in app
 
 1. Open **Settings** from the tray icon.
